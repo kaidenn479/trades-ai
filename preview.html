@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trades AI — Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0e1a; color: #f1f5f9; }
+  a { text-decoration: none; color: inherit; }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 99; background: rgba(10,14,26,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg,#f97316,#f59e0b); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(249,115,22,.25); }
+  .logo-icon svg { width: 16px; height: 16px; color: #fff; }
+  .logo-text { font-weight: 700; font-size: 17px; }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a { font-size: 14px; color: #94a3b8; transition: color .2s; }
+  .nav-links a:hover { color: #fff; }
+  .nav-btns { display: flex; align-items: center; gap: 12px; }
+  .btn-ghost { font-size: 14px; color: #94a3b8; padding: 8px 12px; transition: color .2s; }
+  .btn-ghost:hover { color: #fff; }
+  .btn-primary { font-size: 14px; font-weight: 600; color: #fff; padding: 9px 20px; border-radius: 12px; background: linear-gradient(135deg,#f97316,#f59e0b); box-shadow: 0 4px 20px rgba(249,115,22,.3); transition: opacity .2s; }
+  .btn-primary:hover { opacity: .88; }
+
+  /* HERO */
+  .hero { padding: 120px 24px 80px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:700px; height:400px; background:radial-gradient(ellipse,rgba(249,115,22,.1),transparent 70%); pointer-events:none; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(249,115,22,.1); border: 1px solid rgba(249,115,22,.25); color: #fb923c; font-size: 12px; font-weight: 500; margin-bottom: 24px; }
+  .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #fb923c; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+  h1 { font-size: clamp(38px,6vw,60px); font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+  .gradient-text { background: linear-gradient(135deg,#fb923c,#fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero-sub { font-size: 18px; color: #94a3b8; max-width: 560px; margin: 0 auto 36px; line-height: 1.7; }
+  .hero-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 13px 28px; border-radius: 13px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #fff; font-size: 15px; font-weight: 600; transition: background .2s; }
+  .btn-secondary:hover { background: rgba(255,255,255,.1); }
+  .btn-hero { display: inline-flex; align-items: center; gap: 8px; padding: 13px 28px; border-radius: 13px; background: linear-gradient(135deg,#f97316,#f59e0b); color: #fff; font-size: 15px; font-weight: 600; box-shadow: 0 8px 30px rgba(249,115,22,.3); transition: opacity .2s; }
+  .btn-hero:hover { opacity: .88; }
+  .hint { font-size: 12px; color: #374151; margin-top: 8px; }
+
+  /* CHAT PREVIEW */
+  .chat-box { max-width: 460px; margin: 52px auto 0; background: #111827; border-radius: 20px; border: 1px solid rgba(255,255,255,.07); overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,.5); }
+  .chat-header { padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; gap: 8px; }
+  .dot-live { width: 8px; height: 8px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+  .chat-header span { font-size: 13px; color: #94a3b8; font-weight: 500; }
+  .chat-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { display: flex; }
+  .msg.client { justify-content: flex-end; }
+  .bubble { max-width: 82%; padding: 11px 15px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+  .bubble.client { background: linear-gradient(135deg,#f97316,#f59e0b); color: #fff; border-bottom-right-radius: 4px; }
+  .bubble.ai { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); color: #e2e8f0; border-bottom-left-radius: 4px; }
+  .action-tag { font-size: 11px; font-weight: 600; color: #34d399; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+  .action-tag.book { color: #fb923c; }
+
+  /* SECTION BASE */
+  section { padding: 80px 24px; border-top: 1px solid rgba(255,255,255,.05); }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-title { text-align: center; font-size: 32px; font-weight: 700; margin-bottom: 10px; }
+  .section-sub { text-align: center; color: #94a3b8; font-size: 15px; margin-bottom: 48px; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+  /* TRADES GRID */
+  .trades-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 16px; }
+  .trade-card { border-radius: 18px; padding: 22px; border-width: 1px; border-style: solid; transition: transform .2s; }
+  .trade-card:hover { transform: translateY(-3px); }
+  .trade-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .trade-icon svg { width: 20px; height: 20px; color: #fff; }
+  .trade-label { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .trade-desc { font-size: 12px; color: #6b7280; line-height: 1.5; }
+
+  /* FEATURES GRID */
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 18px; }
+  .feat-card { border-radius: 20px; padding: 26px; border-width: 1px; border-style: solid; }
+  .feat-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .feat-icon svg { width: 20px; height: 20px; color: #fff; }
+  .feat-title { font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+  .feat-desc { font-size: 13px; color: #6b7280; line-height: 1.65; }
+
+  /* HOW IT WORKS */
+  .steps { display: flex; flex-direction: column; gap: 14px; max-width: 700px; margin: 0 auto; }
+  .step { display: flex; gap: 18px; align-items: flex-start; background: #111827; border-radius: 18px; border: 1px solid rgba(255,255,255,.06); padding: 22px 24px; }
+  .step-num { width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg,#f97316,#f59e0b); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0; box-shadow: 0 4px 14px rgba(249,115,22,.25); }
+  .step-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: #6b7280; line-height: 1.6; }
+
+  /* TESTIMONIALS */
+  .reviews { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); gap: 18px; }
+  .review { background: #111827; border-radius: 20px; border: 1px solid rgba(255,255,255,.06); padding: 24px; }
+  .stars { display: flex; gap: 3px; margin-bottom: 14px; }
+  .star { font-size: 15px; color: #fbbf24; }
+  .review-text { font-size: 14px; color: #cbd5e1; line-height: 1.7; margin-bottom: 16px; }
+  .reviewer-name { font-weight: 600; font-size: 14px; }
+  .reviewer-trade { font-size: 12px; color: #4b5563; margin-top: 2px; }
+
+  /* CTA */
+  .cta-box { max-width: 600px; margin: 0 auto; text-align: center; background: linear-gradient(135deg,rgba(249,115,22,.1),rgba(245,158,11,.05)); border-radius: 28px; border: 1px solid rgba(249,115,22,.22); padding: 64px 40px; position: relative; overflow: hidden; }
+  .cta-box::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:320px; height:160px; background:rgba(249,115,22,.1); filter:blur(40px); pointer-events:none; }
+  .cta-icon { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg,#f97316,#f59e0b); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 8px 28px rgba(249,115,22,.35); }
+  .cta-icon svg { width: 28px; height: 28px; color: #fff; }
+  .cta-title { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+  .cta-sub { color: #94a3b8; font-size: 15px; margin-bottom: 28px; line-height: 1.6; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid rgba(255,255,255,.05); padding: 36px 24px; }
+  .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .footer-copy { font-size: 12px; color: #374151; }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a { font-size: 12px; color: #4b5563; transition: color .2s; }
+  .footer-links a:hover { color: #d1d5db; }
+
+  /* SVG inline helpers */
+  svg { display: inline-block; vertical-align: middle; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <span class="logo-text">Trades AI</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it Works</a>
+      <a href="#trades">Trades</a>
+    </div>
+    <div class="nav-btns">
+      <a href="/login" class="btn-ghost">Sign in</a>
+      <a href="/register" class="btn-primary">Get Started Free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge"><span class="badge-dot"></span> AI-Powered for Home Service Pros</div>
+  <h1>Never miss a <span class="gradient-text">service call</span> again</h1>
+  <p class="hero-sub">Trades AI handles client texts and emails 24/7 — answering questions, quoting services, and booking jobs automatically. Built for HVAC techs, plumbers, electricians, and more.</p>
+  <div class="hero-btns">
+    <a href="/register" class="btn-hero">
+      Get Started Free
+      <svg viewBox="0 0 24 24" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+    <a href="/login" class="btn-secondary">Sign In</a>
+  </div>
+  <p class="hint">No credit card required · Set up in minutes</p>
+
+  <!-- Chat preview -->
+  <div class="chat-box">
+    <div class="chat-header">
+      <div class="dot-live"></div>
+      <span>AI Assistant — Active</span>
+    </div>
+    <div class="chat-body">
+      <div class="msg client"><div class="bubble client">Hi, my AC stopped working and it's 95°F outside. Can you help today?</div></div>
+      <div class="msg">
+        <div>
+          <div class="action-tag">✓ Replied</div>
+          <div class="bubble ai">Absolutely! We offer emergency AC repair and can have someone out today. We charge $89/hr and most repairs are same-day. What's your address and best time this afternoon?</div>
+        </div>
+      </div>
+      <div class="msg client"><div class="bubble client">123 Palm Ave, Miami. 3pm works!</div></div>
+      <div class="msg">
+        <div>
+          <div class="action-tag book">🔧 Job booked</div>
+          <div class="bubble ai">Perfect — you're booked for 3:00 PM today at 123 Palm Ave. You'll get a confirmation text shortly. See you then!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADES -->
+<section id="trades">
+  <div class="section-inner">
+    <h2 class="section-title">Built for every trade</h2>
+    <p class="section-sub">Trades AI understands your specific services, pricing, and availability.</p>
+    <div class="trades-grid">
+      <div class="trade-card" style="background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.2)">
+        <div class="trade-icon" style="background:linear-gradient(135deg,#ef4444,#f97316)">
+          <svg viewBox="0 0 24 24"><path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"/></svg>
+        </div>
+        <div class="trade-label">HVAC</div>
+        <div class="trade-desc">AC repair, furnace install, tune-ups</div>
+      </div>
+      <div class="trade-card" style="background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.2)">
+        <div class="trade-icon" style="background:linear-gradient(135deg,#3b82f6,#06b6d4)">
+          <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+        </div>
+        <div class="trade-label">Plumbing</div>
+        <div class="trade-desc">Drain cleaning, leak repair, remodels</div>
+      </div>
+      <div class="trade-card" style="background:rgba(234,179,8,.07);border-color:rgba(234,179,8,.2)">
+        <div class="trade-icon" style="background:linear-gradient(135deg,#eab308,#f59e0b)">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="trade-label">Electrical</div>
+        <div class="trade-desc">Panel upgrades, outlets, inspections</div>
+      </div>
+      <div class="trade-card" style="background:rgba(100,116,139,.07);border-color:rgba(100,116,139,.2)">
+        <div class="trade-icon" style="background:linear-gradient(135deg,#64748b,#94a3b8)">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div class="trade-label">General</div>
+        <div class="trade-desc">Handyman, carpentry, home repairs</div>
+      </div>
+      <div class="trade-card" style="background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.2)">
+        <div class="trade-icon" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div class="trade-label">Roofing</div>
+        <div class="trade-desc">Inspections, repairs, replacements</div>
+      </div>
+      <div class="trade-card" style="background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.2)">
+        <div class="trade-icon" style="background:linear-gradient(135deg,#10b981,#14b8a6)">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="trade-label">Landscaping</div>
+        <div class="trade-desc">Lawn care, tree service, irrigation</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-inner">
+    <h2 class="section-title">Everything you need to close more jobs</h2>
+    <p class="section-sub">Stop losing leads to voicemail. Trades AI handles the front line so you can stay on the job.</p>
+    <div class="features-grid">
+      <div class="feat-card" style="background:rgba(249,115,22,.07);border-color:rgba(249,115,22,.2)">
+        <div class="feat-icon" style="background:linear-gradient(135deg,#f97316,#f59e0b)">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="feat-title">Instant AI replies</div>
+        <div class="feat-desc">Clients text or email — the AI replies in seconds with accurate info about your services, pricing, and availability. Never leave a lead waiting.</div>
+      </div>
+      <div class="feat-card" style="background:rgba(139,92,246,.07);border-color:rgba(139,92,246,.2)">
+        <div class="feat-icon" style="background:linear-gradient(135deg,#8b5cf6,#a855f7)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="feat-title">Automatic job booking</div>
+        <div class="feat-desc">When a client asks to book, the AI confirms the date and time and saves the appointment to your dashboard. You show up, they're already expecting you.</div>
+      </div>
+      <div class="feat-card" style="background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.2)">
+        <div class="feat-icon" style="background:linear-gradient(135deg,#ef4444,#f43f5e)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="feat-title">24/7 availability</div>
+        <div class="feat-desc">Emergency call at 2am? The AI is awake. Mark individual services as 24/7 and the AI will offer emergency bookings around the clock.</div>
+      </div>
+      <div class="feat-card" style="background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.2)">
+        <div class="feat-icon" style="background:linear-gradient(135deg,#3b82f6,#06b6d4)">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.49 12 19.79 19.79 0 0 1 1.39 3.54 2 2 0 0 1 3.37 1.37h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6 6l.5-.5a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/></svg>
+        </div>
+        <div class="feat-title">SMS & email in one place</div>
+        <div class="feat-desc">Connects to your Twilio number and email inbox. All client conversations flow into your dashboard so nothing falls through the cracks.</div>
+      </div>
+      <div class="feat-card" style="background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.2)">
+        <div class="feat-icon" style="background:linear-gradient(135deg,#10b981,#14b8a6)">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div class="feat-title">Your personality, your voice</div>
+        <div class="feat-desc">Train the AI with your bio, FAQs, and communication style. It sounds like you — professional, trustworthy, and on-brand.</div>
+      </div>
+      <div class="feat-card" style="background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.2)">
+        <div class="feat-icon" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="feat-title">Knows when to escalate</div>
+        <div class="feat-desc">Warranty disputes, insurance claims, anything sensitive — the AI recognizes when a human touch is needed and flags it for you immediately.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-inner">
+    <h2 class="section-title">Up and running in minutes</h2>
+    <p class="section-sub">No complicated setup. No IT team required.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div>
+          <div class="step-title">Create your profile</div>
+          <div class="step-desc">Sign up, select your trade, add your license number and service area. Takes 2 minutes.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div>
+          <div class="step-title">Add your services</div>
+          <div class="step-desc">List what you offer with pricing — flat rate, hourly, or free estimate. Mark anything as 24/7 emergency.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div>
+          <div class="step-title">Connect your channels</div>
+          <div class="step-desc">Link your Twilio SMS number and email inbox. The AI immediately starts monitoring for new messages.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div>
+          <div class="step-title">Watch it work</div>
+          <div class="step-desc">Clients reach out, the AI replies instantly and books jobs. Your dashboard shows everything in real time.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section>
+  <div class="section-inner">
+    <h2 class="section-title">Trusted by trade professionals</h2>
+    <p class="section-sub">Real results from real tradespeople.</p>
+    <div class="reviews">
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p class="review-text">"I used to miss 3–4 calls a day while on a job. Now the AI handles them all and I show up to a full schedule."</p>
+        <div class="reviewer-name">Marcus T.</div>
+        <div class="reviewer-trade">HVAC Technician</div>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p class="review-text">"It quoted my services correctly, scheduled the job, and the customer was already waiting when I arrived. Unreal."</p>
+        <div class="reviewer-name">Diane R.</div>
+        <div class="reviewer-trade">Master Plumber</div>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p class="review-text">"Clients get a reply in seconds even at midnight. My 5-star reviews went up because people say I'm 'always responsive.'"</p>
+        <div class="reviewer-name">Kevin S.</div>
+        <div class="reviewer-trade">Electrician</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section>
+  <div class="section-inner">
+    <div class="cta-box">
+      <div class="cta-icon">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <h2 class="cta-title">Ready to grow your business?</h2>
+      <p class="cta-sub">Join tradespeople who never miss a lead. Set up in minutes, cancel any time.</p>
+      <a href="/register" class="btn-hero" style="margin:0 auto;display:inline-flex;">
+        Get Started Free
+        <svg viewBox="0 0 24 24" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <p class="hint" style="margin-top:12px;">No credit card · No contracts</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="logo">
+      <div class="logo-icon" style="width:28px;height:28px;">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <span class="logo-text" style="font-size:15px;">Trades AI</span>
+    </div>
+    <p class="footer-copy">© 2026 Trades AI. Built for the pros who build everything else.</p>
+    <div class="footer-links">
+      <a href="/login">Sign In</a>
+      <a href="/register">Register</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
