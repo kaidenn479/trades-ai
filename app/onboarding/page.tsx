@@ -84,19 +84,21 @@ export default function OnboardingPage() {
     try {
       const res = await fetch("/api/onboarding/plan", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
       if (!res.ok) {
-        const d = await res.json();
-        setError(d.error ?? "Something went wrong");
+        let msg = `Error ${res.status}`;
+        try { msg = (await res.json()).error ?? msg; } catch { /* non-JSON body */ }
+        setError(msg);
         setLoading(false);
         setSelected(null);
         return;
       }
       router.push("/dashboard");
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach server. Please try again.");
       setLoading(false);
       setSelected(null);
     }

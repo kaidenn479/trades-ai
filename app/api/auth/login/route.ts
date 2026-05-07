@@ -13,6 +13,9 @@ export async function POST(req: NextRequest) {
   if (!tech || !tech.password)
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
 
+  if ((tech as { status?: string }).status === "deleted")
+    return NextResponse.json({ error: "This account has been deleted. Contact support if this was a mistake." }, { status: 403 });
+
   const valid = await bcrypt.compare(password, tech.password);
   if (!valid)
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });

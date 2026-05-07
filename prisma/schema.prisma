@@ -35,6 +35,8 @@ model Technician {
   messageResetAt       String?
   stripePublishableKey String?
   stripeSecretKey      String?
+  status               String   @default("active")
+  deletedAt            String?
 
   services      Service[]
   faqs          FAQ[]

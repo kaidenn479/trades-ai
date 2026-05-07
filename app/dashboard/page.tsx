@@ -850,6 +850,7 @@ function AvailabilityTab({ techId }: { techId: string }) {
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 
 function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void }) {
+  const router = useRouter();
   const [form, setForm] = useState({
     name:tech.name, bio:tech.bio??"", phone:tech.phone??"",
     timezone:tech.timezone, tradeType:tech.tradeType,
@@ -862,10 +863,39 @@ function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void })
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
   async function save(e: React.FormEvent) {
     e.preventDefault(); setSaving(true);
     await fetch(`/api/technicians/${tech.id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(form) });
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000); onSave();
+  }
+
+  async function deleteAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setDeleteError("");
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail: deleteEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error ?? "Something went wrong");
+        setDeleting(false);
+        return;
+      }
+      router.push("/login");
+    } catch {
+      setDeleteError("Network error. Please try again.");
+      setDeleting(false);
+    }
   }
 
   return (
@@ -959,6 +989,99 @@ function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void })
         className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white text-sm font-semibold rounded-xl shadow-lg shadow-orange-500/20 disabled:opacity-50 transition-all">
         {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : saving ? "Saving…" : "Save Settings"}
       </button>
+
+      {/* ── Danger Zone ── */}
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.03] p-6 space-y-4">
+        <div>
+          <h3 className="font-semibold text-red-400">Danger Zone</h3>
+          <p className="text-xs text-slate-500 mt-0.5">These actions are permanent and cannot be undone.</p>
+        </div>
+        <div className="flex items-start justify-between gap-6 py-1">
+          <div className="flex-1">
+            <div className="text-sm font-medium text-slate-200">Delete Account</div>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Your account will be deactivated immediately. All client records, appointments, and
+              payment history are <span className="text-slate-300 font-medium">preserved and not deleted</span> — your current
+              billing period will complete as normal. You will be logged out.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setShowDeleteModal(true); setDeleteEmail(""); setDeleteError(""); }}
+            className="shrink-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 text-sm font-semibold rounded-xl transition-all"
+          >
+            Delete Account
+          </button>
+        </div>
+      </div>
+
+      {/* ── Delete Confirmation Modal ── */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#111827] rounded-2xl border border-white/[0.08] shadow-2xl p-6">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-white">Delete your account?</h3>
+                <p className="text-xs text-slate-400 mt-1">This will permanently deactivate your login.</p>
+              </div>
+              <button onClick={() => setShowDeleteModal(false)} className="text-slate-500 hover:text-slate-300 transition-colors ml-4 shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* What's preserved vs what's lost */}
+            <div className="space-y-2 mb-5">
+              <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-3 text-xs text-emerald-300 leading-relaxed">
+                <span className="font-semibold block mb-1">✓ Preserved (not deleted)</span>
+                All client records · Appointment history · Payment records · Service listings
+              </div>
+              <div className="rounded-xl bg-red-500/5 border border-red-500/15 p-3 text-xs text-red-300 leading-relaxed">
+                <span className="font-semibold block mb-1">✗ Removed immediately</span>
+                Login access · Stripe connection · Email (SMTP) settings · Your booking page goes offline
+              </div>
+            </div>
+
+            <form onSubmit={deleteAccount} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1.5 block">
+                  Type your email to confirm: <span className="text-slate-300 normal-case font-normal ml-1">{tech.email}</span>
+                </label>
+                <input
+                  type="email"
+                  value={deleteEmail}
+                  onChange={e => setDeleteEmail(e.target.value)}
+                  placeholder={tech.email}
+                  required
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-red-500/40 transition-all"
+                />
+              </div>
+
+              {deleteError && (
+                <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />{deleteError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] text-slate-300 text-sm font-semibold rounded-xl transition-all border border-white/[0.06]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={deleting || deleteEmail.toLowerCase().trim() !== tech.email.toLowerCase()}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all"
+                >
+                  {deleting ? "Deleting…" : "Yes, Delete My Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
