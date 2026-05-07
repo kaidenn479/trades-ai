@@ -9,12 +9,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     select: {
       id: true, name: true, phone: true, bio: true,
       tradeType: true, licenseNumber: true, serviceArea: true,
-      emergencyService: true,
+      emergencyService: true, weeklyHours: true,
       services: {
         where: { status: "available" },
         orderBy: { category: "asc" },
       },
       faqs: true,
+      blockedSlots: {
+        orderBy: { date: "asc" },
+      },
     },
   });
 

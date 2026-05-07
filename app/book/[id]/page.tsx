@@ -12,11 +12,18 @@ type Service = {
   basePrice: number | null; priceType: string; estimatedHours: number | null;
   available247: boolean;
 };
+type BlockedSlot = {
+  id: string; date: string; startTime: string | null; endTime: string | null;
+  reason: string | null; allDay: boolean;
+};
+type WeeklyHours = Record<string, { open: boolean; start: string; end: string }>;
 type Tech = {
   id: string; name: string; phone: string | null; bio: string | null;
   tradeType: string; licenseNumber: string | null; serviceArea: string | null;
   emergencyService: boolean; services: Service[];
   faqs: { id: string; question: string; answer: string }[];
+  weeklyHours: string | null;
+  blockedSlots: BlockedSlot[];
 };
 type Tab = "services" | "schedule" | "payment" | "confirmed";
 
@@ -45,10 +52,62 @@ const CAT_STYLE: Record<string, { bg: string; border: string; text: string; badg
   Landscaping:{ bg: "bg-emerald-50",border: "border-emerald-200",text: "text-emerald-700",badge: "bg-emerald-100 text-emerald-700 border-emerald-200",icon: Wrench },
 };
 
-const TIME_SLOTS = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM"];
+const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"] as const;
+const ALL_TIME_SLOTS = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM"];
 
 function getNextDays(n: number) {
   return Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i + 1); return d; });
+}
+
+function toDateStr(d: Date) {
+  return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function slotTo24h(slot: string): number {
+  // "8:00 AM" -> 8, "1:00 PM" -> 13
+  const [time, ampm] = slot.split(" ");
+  let [h] = time.split(":").map(Number);
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h;
+}
+
+function isDayBlocked(date: Date, weeklyHours: WeeklyHours | null, blockedSlots: BlockedSlot[]): boolean {
+  const dayKey = DAY_KEYS[date.getDay()];
+  // Check weekly hours
+  if (weeklyHours && weeklyHours[dayKey] && !weeklyHours[dayKey].open) return true;
+  // Check all-day blocked slots
+  const dateStr = toDateStr(date);
+  if (blockedSlots.some(s => s.date === dateStr && s.allDay)) return true;
+  return false;
+}
+
+function getAvailableSlots(date: Date, weeklyHours: WeeklyHours | null, blockedSlots: BlockedSlot[]): string[] {
+  const dayKey = DAY_KEYS[date.getDay()];
+  const dateStr = toDateStr(date);
+
+  let startH = 8, endH = 17;
+  if (weeklyHours && weeklyHours[dayKey]) {
+    const [sh] = weeklyHours[dayKey].start.split(":").map(Number);
+    const [eh] = weeklyHours[dayKey].end.split(":").map(Number);
+    startH = sh;
+    endH = eh;
+  }
+
+  // Partial blocks for this date
+  const partialBlocks = blockedSlots.filter(s => s.date === dateStr && !s.allDay && s.startTime && s.endTime);
+
+  return ALL_TIME_SLOTS.filter(slot => {
+    const h = slotTo24h(slot);
+    if (h < startH || h >= endH) return false;
+    // Check if this hour overlaps a partial block
+    for (const block of partialBlocks) {
+      const [bsh] = (block.startTime as string).split(":").map(Number);
+      const [beh] = (block.endTime as string).split(":").map(Number);
+      if (h >= bsh && h < beh) return false;
+    }
+    return true;
+  });
 }
 
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +131,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (id === "demo") {
-      setTech({ id: "demo", name: "Mike's HVAC & Plumbing", phone: "+15550001234", bio: "Family-owned HVAC and plumbing company serving the Orlando area for over 15 years. Licensed, bonded, and always on time.", tradeType: "HVAC", licenseNumber: "CAC1234567", serviceArea: "Orlando & surrounding areas", emergencyService: true, services: DEMO_SERVICES, faqs: DEMO_FAQS });
+      setTech({ id: "demo", name: "Mike's HVAC & Plumbing", phone: "+15550001234", bio: "Family-owned HVAC and plumbing company serving the Orlando area for over 15 years. Licensed, bonded, and always on time.", tradeType: "HVAC", licenseNumber: "CAC1234567", serviceArea: "Orlando & surrounding areas", emergencyService: true, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [] });
       setIsDemo(true);
       setLoading(false);
       return;
@@ -81,7 +140,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       .then(r => r.json())
       .then(data => {
         if (data.error) {
-          setTech({ id, name: "Demo Company", phone: null, bio: "Add services from your dashboard to display them here.", tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS });
+          setTech({ id, name: "Demo Company", phone: null, bio: "Add services from your dashboard to display them here.", tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [] });
           setIsDemo(true);
         } else {
           setTech(data);
@@ -89,7 +148,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         setLoading(false);
       })
       .catch(() => {
-        setTech({ id, name: "Demo Company", phone: null, bio: null, tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS });
+        setTech({ id, name: "Demo Company", phone: null, bio: null, tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [] });
         setIsDemo(true);
         setLoading(false);
       });
@@ -156,6 +215,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const CatIcon = CAT_STYLE[tech.tradeType]?.icon ?? Wrench;
   const completedSteps = tab === "services" ? [] : tab === "schedule" ? ["services"] : tab === "payment" ? ["services","schedule"] : ["services","schedule","payment"];
   const STEPS: { id: Tab; label: string }[] = [{ id:"services",label:"Services"},{id:"schedule",label:"Schedule"},{id:"payment",label:"Payment"},{id:"confirmed",label:"Confirmed"}];
+
+  const parsedWeeklyHours: WeeklyHours | null = tech.weeklyHours ? JSON.parse(tech.weeklyHours) : null;
+  const availableTimeSlots = selectedDate ? getAvailableSlots(selectedDate, parsedWeeklyHours, tech.blockedSlots) : [];
 
   const canPay = !!(selectedDate && selectedTime && contact.name && contact.phone);
 
@@ -419,15 +481,24 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                 {getNextDays(14).map(d => {
                   const active = selectedDate?.toDateString() === d.toDateString();
+                  const blocked = isDayBlocked(d, parsedWeeklyHours, tech.blockedSlots);
                   return (
-                    <button key={d.toISOString()} onClick={() => setSelectedDate(d)}
+                    <button
+                      key={d.toISOString()}
+                      onClick={() => { if (!blocked) { setSelectedDate(d); setSelectedTime(null); } }}
+                      disabled={blocked}
+                      title={blocked ? "Not available" : undefined}
                       className={`rounded-xl p-2.5 text-center transition-all border ${
-                        active ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200"
-                        : "bg-white border-slate-200 hover:border-orange-300 text-slate-700 hover:bg-orange-50"
+                        blocked
+                          ? "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed opacity-60"
+                          : active
+                            ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200"
+                            : "bg-white border-slate-200 hover:border-orange-300 text-slate-700 hover:bg-orange-50"
                       }`}>
                       <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{d.toLocaleDateString("en-US",{weekday:"short"})}</div>
                       <div className="text-base font-bold mt-0.5">{d.getDate()}</div>
                       <div className="text-[10px] opacity-60">{d.toLocaleDateString("en-US",{month:"short"})}</div>
+                      {blocked && <div className="text-[9px] mt-0.5 opacity-50">Unavailable</div>}
                     </button>
                   );
                 })}
@@ -438,16 +509,23 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             {selectedDate && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                 <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-orange-500" />Choose a time</h3>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {TIME_SLOTS.map(t => (
-                    <button key={t} onClick={() => setSelectedTime(t)}
-                      className={`py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                        selectedTime === t
-                          ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200"
-                          : "bg-white border-slate-200 text-slate-700 hover:border-orange-300 hover:bg-orange-50"
-                      }`}>{t}</button>
-                  ))}
-                </div>
+                {availableTimeSlots.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-sm">
+                    <Clock className="w-6 h-6 mx-auto mb-2 opacity-40" />
+                    No available times for this day. Please select another date.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {availableTimeSlots.map(t => (
+                      <button key={t} onClick={() => setSelectedTime(t)}
+                        className={`py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                          selectedTime === t
+                            ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200"
+                            : "bg-white border-slate-200 text-slate-700 hover:border-orange-300 hover:bg-orange-50"
+                        }`}>{t}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
