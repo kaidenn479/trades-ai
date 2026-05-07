@@ -35,7 +35,7 @@ function AuthForm() {
     const data = await res.json();
     setLoading(false);
     if (!res.ok) setError(data.error ?? "Something went wrong");
-    else router.push("/dashboard");
+    else router.push(mode === "register" ? "/onboarding" : "/dashboard");
   }
 
   async function submitForgot(e: React.FormEvent) {
