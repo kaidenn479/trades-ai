@@ -206,6 +206,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     setQuoteSending(false);
   }
 
+  // ── Hooks that must run unconditionally (before any early returns) ────────────
+  // Load Stripe with the company's publishable key (memoized so it doesn't reload)
+  const stripePromise = useMemo(() => {
+    if (tech?.stripePublishableKey) return loadStripe(tech.stripePublishableKey);
+    return null;
+  }, [tech?.stripePublishableKey]);
+
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
@@ -233,12 +240,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const brandStyle = { backgroundColor: brand, boxShadow: `0 4px 14px ${brand}40` };
   const brandBorder = { borderColor: brand };
   const brandText = { color: brand };
-
-  // Load Stripe with the company's publishable key (memoized so it doesn't reload)
-  const stripePromise = useMemo(() => {
-    if (tech.stripePublishableKey) return loadStripe(tech.stripePublishableKey);
-    return null;
-  }, [tech.stripePublishableKey]);
 
   // Create payment intent when entering the payment tab (for paid services)
   async function enterPayment() {
