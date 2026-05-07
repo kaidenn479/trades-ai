@@ -8,14 +8,16 @@ import {
   Settings, LogOut, Plus, Trash2, Pencil,
   RefreshCw, CheckCircle, AlertCircle, Clock, X,
   ChevronRight, Zap, Droplets, Flame, ShieldCheck, ExternalLink,
-  TrendingUp, CalendarOff, Bell,
+  TrendingUp, CalendarOff, Bell, BarChart2,
 } from "lucide-react";
+import AnalyticsTab from "./analytics-tab";
 
 type Technician = {
   id: string; name: string; email: string; phone: string | null;
   bio: string | null; timezone: string; tradeType: string;
   licenseNumber: string | null; serviceArea: string | null;
   emergencyService: boolean; aiPersonality: string | null;
+  brandColor: string; plan: string;
   services: Service[]; faqs: FAQ[]; clients: Client[]; appointments: Appointment[];
 };
 type Service = {
@@ -27,7 +29,7 @@ type FAQ = { id: string; question: string; answer: string };
 type Client = { id: string; name: string | null; phone: string | null; email: string | null; messages: { content: string; createdAt: string; channel: string }[] };
 type Appointment = { id: string; title: string; startTime: string; endTime: string; location: string | null; client: { name: string | null; phone: string | null; email: string | null } };
 type BlockedSlot = { id: string; date: string; startTime: string | null; endTime: string | null; reason: string | null; allDay: boolean };
-type Tab = "overview" | "services" | "faqs" | "clients" | "appointments" | "availability" | "settings";
+type Tab = "overview" | "analytics" | "services" | "faqs" | "clients" | "appointments" | "availability" | "settings";
 
 const DAYS = ["mon","tue","wed","thu","fri","sat","sun"] as const;
 const DAY_LABELS: Record<string, string> = { mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday", sun:"Sunday" };
@@ -38,6 +40,7 @@ const DEFAULT_HOURS: WeeklyHours = Object.fromEntries(
 
 const NAV = [
   { id: "overview"     as Tab, label: "Overview",      icon: LayoutDashboard },
+  { id: "analytics"    as Tab, label: "Analytics",     icon: BarChart2 },
   { id: "services"     as Tab, label: "Services",      icon: Wrench },
   { id: "availability" as Tab, label: "Availability",  icon: CalendarOff },
   { id: "appointments" as Tab, label: "Job Calls",     icon: Calendar },
@@ -193,6 +196,7 @@ export default function Dashboard() {
 
         <div className="flex-1 overflow-y-auto p-8">
           {tab === "overview"     && <OverviewTab tech={tech} setTab={setTab} />}
+          {tab === "analytics"    && <AnalyticsTab />}
           {tab === "services"     && <ServicesTab tech={tech} onRefresh={loadTech} />}
           {tab === "faqs"         && <FAQsTab tech={tech} onRefresh={loadTech} />}
           {tab === "clients"      && <ClientsTab clients={tech.clients} />}
@@ -208,6 +212,7 @@ export default function Dashboard() {
 function pageSubtitle(tab: Tab, tech: Technician): string {
   switch (tab) {
     case "overview":      return `Welcome back, ${tech.name.split(" ")[0]} — here's what's happening`;
+    case "analytics":     return "Revenue, bookings, and conversation trends";
     case "services":      return "Manage the services you offer";
     case "faqs":          return "Common questions shown on your booking page";
     case "clients":       return "Customers who have reached out";
@@ -850,6 +855,7 @@ function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void })
     licenseNumber:tech.licenseNumber??"", serviceArea:tech.serviceArea??"",
     emergencyService:tech.emergencyService, aiPersonality:tech.aiPersonality??"",
     smtpHost:"", smtpPort:"587", smtpUser:"", smtpPass:"",
+    brandColor: tech.brandColor ?? "#f97316",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -881,6 +887,33 @@ function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void })
             <div className="text-xs text-slate-500 mt-0.5">Shows the emergency badge on your booking page</div>
           </div>
           <Toggle checked={form.emergencyService} onChange={v => setForm({...form,emergencyService:v})} />
+        </div>
+      </SettingsCard>
+
+      <SettingsCard title="Branding" subtitle="Customize how your customer booking page looks.">
+        <div>
+          <label className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-2 block">Brand Color</label>
+          <div className="flex items-center gap-3">
+            <input type="color" value={form.brandColor} onChange={e => setForm({...form, brandColor: e.target.value})}
+              className="w-10 h-10 rounded-xl border border-white/[0.08] bg-transparent cursor-pointer p-0.5" />
+            <div className="flex gap-2 flex-wrap">
+              {["#f97316","#3b82f6","#10b981","#8b5cf6","#ef4444","#ec4899","#0ea5e9","#14b8a6"].map(c => (
+                <button key={c} type="button" onClick={() => setForm({...form, brandColor: c})}
+                  style={{backgroundColor: c}}
+                  className={`w-7 h-7 rounded-lg border-2 transition-all ${form.brandColor === c ? "border-white scale-110" : "border-transparent"}`} />
+              ))}
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2">This color will be used on your customer booking page buttons and accents.</p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-2 block">Your Booking Link</label>
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl">
+            <span className="text-sm text-slate-300 flex-1 font-mono truncate">/book/{tech.id}</span>
+            <a href={`/book/${tech.id}`} target="_blank" rel="noreferrer" className="text-orange-400 hover:text-orange-300 transition-colors shrink-0">
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
         </div>
       </SettingsCard>
 

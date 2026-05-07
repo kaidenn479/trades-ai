@@ -59,6 +59,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       smtpPort: body.smtpPort ? parseInt(body.smtpPort) : null,
       smtpUser: body.smtpUser || null,
       smtpPass: body.smtpPass || null,
+      brandColor: body.brandColor || "#f97316",
+      plan: body.plan || undefined,
     },
   });
 

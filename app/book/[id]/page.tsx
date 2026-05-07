@@ -24,6 +24,7 @@ type Tech = {
   faqs: { id: string; question: string; answer: string }[];
   weeklyHours: string | null;
   blockedSlots: BlockedSlot[];
+  brandColor: string | null;
 };
 type Tab = "services" | "schedule" | "payment" | "confirmed";
 
@@ -131,7 +132,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (id === "demo") {
-      setTech({ id: "demo", name: "Mike's HVAC & Plumbing", phone: "+15550001234", bio: "Family-owned HVAC and plumbing company serving the Orlando area for over 15 years. Licensed, bonded, and always on time.", tradeType: "HVAC", licenseNumber: "CAC1234567", serviceArea: "Orlando & surrounding areas", emergencyService: true, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [] });
+      setTech({ id: "demo", name: "Mike's HVAC & Plumbing", phone: "+15550001234", bio: "Family-owned HVAC and plumbing company serving the Orlando area for over 15 years. Licensed, bonded, and always on time.", tradeType: "HVAC", licenseNumber: "CAC1234567", serviceArea: "Orlando & surrounding areas", emergencyService: true, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316" });
       setIsDemo(true);
       setLoading(false);
       return;
@@ -140,7 +141,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       .then(r => r.json())
       .then(data => {
         if (data.error) {
-          setTech({ id, name: "Demo Company", phone: null, bio: "Add services from your dashboard to display them here.", tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [] });
+          setTech({ id, name: "Demo Company", phone: null, bio: "Add services from your dashboard to display them here.", tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316" });
           setIsDemo(true);
         } else {
           setTech(data);
@@ -148,7 +149,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         setLoading(false);
       })
       .catch(() => {
-        setTech({ id, name: "Demo Company", phone: null, bio: null, tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [] });
+        setTech({ id, name: "Demo Company", phone: null, bio: null, tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316" });
         setIsDemo(true);
         setLoading(false);
       });
@@ -219,6 +220,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const parsedWeeklyHours: WeeklyHours | null = tech.weeklyHours ? JSON.parse(tech.weeklyHours) : null;
   const availableTimeSlots = selectedDate ? getAvailableSlots(selectedDate, parsedWeeklyHours, tech.blockedSlots) : [];
 
+  // Brand color from technician settings
+  const brand = tech.brandColor ?? "#f97316";
+  const brandStyle = { backgroundColor: brand, boxShadow: `0 4px 14px ${brand}40` };
+  const brandBorder = { borderColor: brand };
+  const brandText = { color: brand };
+
   const canPay = !!(selectedDate && selectedTime && contact.name && contact.phone);
 
   return (
@@ -235,7 +242,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-200">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md" style={brandStyle}>
               <CatIcon className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -488,12 +495,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       onClick={() => { if (!blocked) { setSelectedDate(d); setSelectedTime(null); } }}
                       disabled={blocked}
                       title={blocked ? "Not available" : undefined}
+                      style={active ? brandStyle : {}}
                       className={`rounded-xl p-2.5 text-center transition-all border ${
                         blocked
                           ? "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed opacity-60"
                           : active
-                            ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200"
-                            : "bg-white border-slate-200 hover:border-orange-300 text-slate-700 hover:bg-orange-50"
+                            ? "text-white border-transparent"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                       }`}>
                       <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{d.toLocaleDateString("en-US",{weekday:"short"})}</div>
                       <div className="text-base font-bold mt-0.5">{d.getDate()}</div>
@@ -548,7 +556,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
 
             <button onClick={() => canPay && setTab("payment")} disabled={!canPay}
-              className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-base">
+              className="w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-base"
+              style={canPay ? brandStyle : {}}>
               Continue to Payment <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -648,7 +657,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             )}
 
             <button type="submit" disabled={paying}
-              className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 disabled:opacity-60 transition-all flex items-center justify-center gap-2 text-base">
+              className="w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-60 transition-all flex items-center justify-center gap-2 text-base"
+              style={brandStyle}>
               {paying
                 ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Processing...</>
                 : selected?.priceType === "estimate"
