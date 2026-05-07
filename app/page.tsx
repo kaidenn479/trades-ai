@@ -1,8 +1,8 @@
 import Link from "next/link";
 import {
-  Wrench, Zap, Droplets, Flame, Phone, Clock, CheckCircle,
+  Wrench, Phone, Clock, CheckCircle,
   MessageSquare, Calendar, Star, ArrowRight, Shield, Users,
-  ChevronRight, BadgeCheck, Lock, TrendingUp, Smartphone,
+  BadgeCheck, TrendingUp, Smartphone, CreditCard, MapPin,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -60,14 +60,14 @@ function Hero() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold mb-6 border border-orange-200">
             <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-            AI-Powered for HVAC & Home Service Pros
+            Built for HVAC Techs, Plumbers &amp; Electricians
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 leading-[1.08] tracking-tight mb-6">
-            Stop losing jobs<br />
-            <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">to missed calls</span>
+            Your scheduling &amp; booking<br />
+            <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">on autopilot</span>
           </h1>
           <p className="text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Trades AI texts and emails clients back instantly — answering questions, quoting services, and booking jobs 24/7. Built for HVAC techs, plumbers, and electricians.
+            Give clients a branded booking page, collect payments, manage your schedule, and track every job — all from one dashboard. Built for trades pros.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register" className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-semibold rounded-xl shadow-xl shadow-orange-200 transition-all text-base">
@@ -80,29 +80,73 @@ function Hero() {
           <p className="text-sm text-slate-400 mt-4">Set up in under 5 minutes · Cancel any time</p>
         </div>
 
-        {/* Chat demo */}
-        <div className="max-w-md mx-auto">
+        {/* Booking preview mockup */}
+        <div className="max-w-sm mx-auto">
           <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
-            <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                <Wrench className="w-4 h-4 text-white" />
               </div>
-              <div className="flex items-center gap-2 mx-auto">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs text-slate-500 font-medium">AI Assistant — Online</span>
+              <div>
+                <div className="text-white font-bold text-sm">Mike&apos;s HVAC Services</div>
+                <div className="text-orange-100 text-xs">Orlando, FL · Licensed &amp; Insured</div>
               </div>
             </div>
-            <div className="p-5 space-y-4 bg-white">
-              <DemoBubble from="client" text="My AC isn't cooling and it's 97°F. Can someone come today?" />
-              <DemoBubble from="ai" text="Absolutely! We have emergency AC service available today. We charge $89/hr and most repairs take 1–2 hours. Can I get your address and a time that works?" tag="Replied in 2s" />
-              <DemoBubble from="client" text="555 Oak Dr, Orlando. Anytime after 1pm." />
-              <DemoBubble from="ai" text="You're booked for 1:30 PM today at 555 Oak Dr! You'll get a text confirmation shortly. See you soon! 🙌" tag="Job booked" tagColor="orange" />
+            {/* Service selected */}
+            <div className="px-5 py-4 border-b border-slate-100">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Selected Service</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">AC Tune-Up &amp; Inspection</div>
+                  <div className="text-xs text-slate-400 mt-0.5">~1.5 hrs · Flat rate</div>
+                </div>
+                <div className="text-sm font-bold text-orange-600">$129</div>
+              </div>
+            </div>
+            {/* Mini calendar row */}
+            <div className="px-5 py-4 border-b border-slate-100">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Pick a Date</div>
+              <div className="flex gap-2 justify-between">
+                {[
+                  { d: "Mon", n: "12", avail: true, sel: false },
+                  { d: "Tue", n: "13", avail: true, sel: true },
+                  { d: "Wed", n: "14", avail: false, sel: false },
+                  { d: "Thu", n: "15", avail: true, sel: false },
+                  { d: "Fri", n: "16", avail: true, sel: false },
+                ].map(({ d, n, avail, sel }) => (
+                  <div key={n} className={`flex-1 flex flex-col items-center py-2 rounded-lg text-center ${
+                    sel ? "bg-orange-500 text-white" :
+                    avail ? "bg-slate-50 text-slate-700 hover:bg-orange-50" :
+                    "bg-slate-50 text-slate-300"
+                  }`}>
+                    <span className="text-[10px] font-medium">{d}</span>
+                    <span className="text-sm font-bold">{n}</span>
+                    {!avail && <span className="text-[9px] mt-0.5">Off</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Time slots */}
+            <div className="px-5 py-4">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Available Times</div>
+              <div className="grid grid-cols-3 gap-2">
+                {["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM"].map((t, i) => (
+                  <div key={t} className={`py-1.5 rounded-lg text-center text-xs font-semibold border transition-all ${
+                    i === 1
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-orange-300"
+                  }`}>{t}</div>
+                ))}
+              </div>
+              <button className="w-full mt-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200">
+                Book Appointment
+              </button>
             </div>
           </div>
+          {/* Stats below */}
           <div className="flex items-center justify-center gap-6 mt-5">
-            {[["2s", "Avg. reply time"], ["98%", "Jobs booked"], ["24/7", "Always on"]].map(([val, label]) => (
+            {[["500+", "Pros using it"], ["4.9★", "Avg. rating"], ["24/7", "Bookings open"]].map(([val, label]) => (
               <div key={label} className="text-center">
                 <div className="text-xl font-bold text-slate-900">{val}</div>
                 <div className="text-xs text-slate-400">{label}</div>
@@ -112,25 +156,6 @@ function Hero() {
         </div>
       </div>
     </section>
-  );
-}
-
-function DemoBubble({ from, text, tag, tagColor = "green" }: { from: "client" | "ai"; text: string; tag?: string; tagColor?: "green" | "orange" }) {
-  return (
-    <div className={`flex ${from === "client" ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[85%] ${from === "client" ? "items-end" : "items-start"} flex flex-col gap-1`}>
-        {tag && (
-          <div className={`flex items-center gap-1 text-[11px] font-semibold ${tagColor === "orange" ? "text-orange-500" : "text-emerald-600"}`}>
-            <CheckCircle className="w-3 h-3" /> {tag}
-          </div>
-        )}
-        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-          from === "client"
-            ? "bg-slate-800 text-white rounded-tr-sm"
-            : "bg-orange-50 border border-orange-100 text-slate-800 rounded-tl-sm"
-        }`}>{text}</div>
-      </div>
-    </div>
   );
 }
 
@@ -154,14 +179,14 @@ function LogoBar() {
 // ── FEATURES ──────────────────────────────────────────────────────────────────
 function Features() {
   const features = [
-    { icon: MessageSquare, title: "Instant AI replies", desc: "Clients text or email — the AI responds in under 3 seconds with accurate pricing and availability. No more missed leads.", color: "bg-orange-100 text-orange-600" },
-    { icon: Calendar,      title: "Auto job booking",  desc: "The AI confirms appointments, picks the time, and saves it to your dashboard. You show up ready to work.", color: "bg-violet-100 text-violet-600" },
-    { icon: Clock,         title: "24/7 emergency service", desc: "Mark services as available around the clock. The AI handles emergency calls at 2am so you don't have to.", color: "bg-red-100 text-red-600" },
-    { icon: Phone,         title: "SMS & email, unified", desc: "Connect your Twilio number and email. Every conversation appears in one clean inbox on your dashboard.", color: "bg-blue-100 text-blue-600" },
-    { icon: TrendingUp,    title: "Revenue analytics", desc: "See jobs booked, revenue tracked, and which services are most popular — all updated in real time.", color: "bg-emerald-100 text-emerald-600" },
-    { icon: Shield,        title: "Smart escalation",  desc: "Warranty disputes, insurance, or anything complex — the AI flags it for you instead of guessing.", color: "bg-amber-100 text-amber-600" },
-    { icon: Smartphone,    title: "Mobile-first dashboard", desc: "Check your schedule, clients, and bookings from your phone between jobs. No desktop required.", color: "bg-cyan-100 text-cyan-600" },
-    { icon: BadgeCheck,    title: "Your voice, your brand", desc: "Set your AI's tone, add your bio and FAQs. It sounds exactly like you — professional and on-brand.", color: "bg-pink-100 text-pink-600" },
+    { icon: Calendar,     title: "Online booking page",       desc: "Every technician gets a branded booking page clients can use 24/7 — pick a service, choose a time, done.", color: "bg-orange-100 text-orange-600" },
+    { icon: Clock,        title: "Smart availability",        desc: "Set your weekly hours and block off dates. Only open slots show — no double-bookings, no back-and-forth.", color: "bg-violet-100 text-violet-600" },
+    { icon: CreditCard,   title: "Online payments",           desc: "Collect payment upfront before the visit. Connect your Stripe account and get paid directly to your bank.", color: "bg-emerald-100 text-emerald-600" },
+    { icon: MessageSquare,title: "Client inbox",              desc: "Every SMS and email from clients lands in one clean inbox. Reply, view history, and stay organized.", color: "bg-blue-100 text-blue-600" },
+    { icon: TrendingUp,   title: "Revenue analytics",         desc: "See jobs booked, revenue tracked, and which services are most popular — all updated in real time.", color: "bg-amber-100 text-amber-600" },
+    { icon: MapPin,       title: "Service area control",      desc: "Set your license number, service area, and trade type so clients know exactly who they're booking.", color: "bg-red-100 text-red-600" },
+    { icon: Smartphone,   title: "Mobile-first dashboard",    desc: "Check your schedule, clients, and bookings from your phone between jobs. No desktop required.", color: "bg-cyan-100 text-cyan-600" },
+    { icon: BadgeCheck,   title: "Your brand, your colors",   desc: "Customize your booking page with your brand color, bio, FAQs, and service list. Looks like your own site.", color: "bg-pink-100 text-pink-600" },
   ];
 
   return (
@@ -169,8 +194,8 @@ function Features() {
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold mb-4 border border-slate-200">Features</div>
-          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">Everything you need to close more jobs</h2>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">Stop losing leads to voicemail. Trades AI handles the front line while you focus on the work.</p>
+          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">Everything you need to run your business</h2>
+          <p className="text-lg text-slate-500 max-w-xl mx-auto">One platform for bookings, payments, scheduling, and client management. Built for trades pros.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {features.map(({ icon: Icon, title, desc, color }) => (
@@ -193,8 +218,8 @@ function HowItWorks() {
   const steps = [
     { num: "01", title: "Create your profile",    desc: "Sign up, choose your trade, add your license number and service area. Done in 2 minutes." },
     { num: "02", title: "Add your services",       desc: "List what you offer — AC repair, furnace install, drain cleaning — with flat, hourly, or free estimate pricing." },
-    { num: "03", title: "Connect your phone & email", desc: "Link your Twilio SMS number and email. The AI starts responding to clients immediately." },
-    { num: "04", title: "Jobs come to you",        desc: "Clients get instant replies, book their own appointments, and you see everything on your dashboard." },
+    { num: "03", title: "Set your availability",   desc: "Choose your weekly hours and block off any days you're unavailable. Clients only see open slots." },
+    { num: "04", title: "Share your booking link", desc: "Send clients your personal booking page. They pick a service, choose a time, and pay — you get notified." },
   ];
 
   return (
@@ -203,7 +228,7 @@ function HowItWorks() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-200 text-slate-600 text-xs font-semibold mb-4 border border-slate-200">How it Works</div>
           <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">Up and running in under 5 minutes</h2>
-          <p className="text-lg text-slate-500">No IT team. No complicated setup. Just connect and go.</p>
+          <p className="text-lg text-slate-500">No IT team. No complicated setup. Just sign up and share your link.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {steps.map(({ num, title, desc }) => (
