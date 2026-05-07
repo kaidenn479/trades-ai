@@ -29,10 +29,12 @@ model Technician {
   weeklyHours      String?
   resetToken       String?
   resetTokenExpiry String?
-  plan             String   @default("starter")
-  brandColor       String   @default("#f97316")
-  messageCount     Int      @default(0)
-  messageResetAt   String?
+  plan                 String   @default("starter")
+  brandColor           String   @default("#f97316")
+  messageCount         Int      @default(0)
+  messageResetAt       String?
+  stripePublishableKey String?
+  stripeSecretKey      String?
 
   services      Service[]
   faqs          FAQ[]

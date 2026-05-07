@@ -61,6 +61,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       smtpPass: body.smtpPass || null,
       brandColor: body.brandColor || "#f97316",
       plan: body.plan || undefined,
+      stripePublishableKey: body.stripePublishableKey || null,
+      stripeSecretKey: body.stripeSecretKey || null,
     },
   });
 

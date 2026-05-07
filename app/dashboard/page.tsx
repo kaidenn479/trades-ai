@@ -18,6 +18,7 @@ type Technician = {
   licenseNumber: string | null; serviceArea: string | null;
   emergencyService: boolean; aiPersonality: string | null;
   brandColor: string; plan: string;
+  stripePublishableKey: string | null; stripeSecretKey: string | null;
   services: Service[]; faqs: FAQ[]; clients: Client[]; appointments: Appointment[];
 };
 type Service = {
@@ -856,6 +857,7 @@ function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void })
     emergencyService:tech.emergencyService, aiPersonality:tech.aiPersonality??"",
     smtpHost:"", smtpPort:"587", smtpUser:"", smtpPass:"",
     brandColor: tech.brandColor ?? "#f97316",
+    stripePublishableKey: "", stripeSecretKey: "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -915,6 +917,33 @@ function SettingsTab({ tech, onSave }: { tech: Technician; onSave: () => void })
             </a>
           </div>
         </div>
+      </SettingsCard>
+
+      <SettingsCard title="Stripe Payments" subtitle="Your customers pay directly into your Stripe account. Get your keys at dashboard.stripe.com → Developers → API Keys.">
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15 mb-1">
+          <CheckCircle className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-emerald-300 leading-relaxed">
+            Money goes <strong>directly to you</strong> — Trades AI never touches your payments. Your Stripe secret key is encrypted and never exposed to customers.
+          </p>
+        </div>
+        <DashField
+          label="Publishable Key (pk_live_... or pk_test_...)"
+          value={form.stripePublishableKey}
+          onChange={v => setForm({...form, stripePublishableKey: v})}
+          placeholder="Starts with pk_live_ or pk_test_"
+        />
+        <DashField
+          label="Secret Key (sk_live_... or sk_test_...)"
+          type="password"
+          value={form.stripeSecretKey}
+          onChange={v => setForm({...form, stripeSecretKey: v})}
+          placeholder="Starts with sk_live_ or sk_test_"
+        />
+        {(tech.stripePublishableKey || tech.stripeSecretKey) && (
+          <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
+            <CheckCircle className="w-3.5 h-3.5" /> Stripe is connected — customers can pay on your booking page
+          </div>
+        )}
       </SettingsCard>
 
       <SettingsCard title="Email (SMTP)" subtitle="Used to send appointment confirmations. Gmail: host smtp.gmail.com, port 587, use an App Password.">

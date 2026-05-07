@@ -10,6 +10,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       id: true, name: true, phone: true, bio: true,
       tradeType: true, licenseNumber: true, serviceArea: true,
       emergencyService: true, weeklyHours: true, brandColor: true,
+      stripePublishableKey: true,
       services: {
         where: { status: "available" },
         orderBy: { category: "asc" },

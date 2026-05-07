@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import {
   Wrench, Flame, Droplets, Zap, Clock, CheckCircle, Calendar,
   CreditCard, User, Phone, Mail, MapPin, Shield, Star, ChevronRight,
   ArrowLeft, BadgeCheck, Lock, AlertCircle, ChevronDown,
 } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 type Service = {
   id: string; name: string; category: string; description: string | null;
@@ -25,6 +27,7 @@ type Tech = {
   weeklyHours: string | null;
   blockedSlots: BlockedSlot[];
   brandColor: string | null;
+  stripePublishableKey: string | null;
 };
 type Tab = "services" | "schedule" | "payment" | "confirmed";
 
@@ -121,7 +124,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [contact, setContact] = useState({ name: "", phone: "", email: "", address: "", notes: "" });
-  const [card, setCard] = useState({ number: "", expiry: "", cvv: "", name: "" });
+  const [card, setCard] = useState({ number: "", expiry: "", cvv: "", name: "" }); // kept for reset only
   const [paying, setPaying] = useState(false);
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [confirmationId] = useState(() => "JOB-" + Math.random().toString(36).slice(2,8).toUpperCase());
@@ -130,9 +133,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [quoteSent, setQuoteSent] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
+  // Stripe state
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+
   useEffect(() => {
     if (id === "demo") {
-      setTech({ id: "demo", name: "Mike's HVAC & Plumbing", phone: "+15550001234", bio: "Family-owned HVAC and plumbing company serving the Orlando area for over 15 years. Licensed, bonded, and always on time.", tradeType: "HVAC", licenseNumber: "CAC1234567", serviceArea: "Orlando & surrounding areas", emergencyService: true, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316" });
+      setTech({ id: "demo", name: "Mike's HVAC & Plumbing", phone: "+15550001234", bio: "Family-owned HVAC and plumbing company serving the Orlando area for over 15 years. Licensed, bonded, and always on time.", tradeType: "HVAC", licenseNumber: "CAC1234567", serviceArea: "Orlando & surrounding areas", emergencyService: true, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316", stripePublishableKey: null });
       setIsDemo(true);
       setLoading(false);
       return;
@@ -141,7 +149,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       .then(r => r.json())
       .then(data => {
         if (data.error) {
-          setTech({ id, name: "Demo Company", phone: null, bio: "Add services from your dashboard to display them here.", tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316" });
+          setTech({ id, name: "Demo Company", phone: null, bio: "Add services from your dashboard to display them here.", tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316", stripePublishableKey: null });
           setIsDemo(true);
         } else {
           setTech(data);
@@ -149,7 +157,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         setLoading(false);
       })
       .catch(() => {
-        setTech({ id, name: "Demo Company", phone: null, bio: null, tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316" });
+        setTech({ id, name: "Demo Company", phone: null, bio: null, tradeType: "General", licenseNumber: null, serviceArea: null, emergencyService: false, services: DEMO_SERVICES, faqs: DEMO_FAQS, weeklyHours: null, blockedSlots: [], brandColor: "#f97316", stripePublishableKey: null });
         setIsDemo(true);
         setLoading(false);
       });
@@ -225,6 +233,45 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const brandStyle = { backgroundColor: brand, boxShadow: `0 4px 14px ${brand}40` };
   const brandBorder = { borderColor: brand };
   const brandText = { color: brand };
+
+  // Load Stripe with the company's publishable key (memoized so it doesn't reload)
+  const stripePromise = useMemo(() => {
+    if (tech.stripePublishableKey) return loadStripe(tech.stripePublishableKey);
+    return null;
+  }, [tech.stripePublishableKey]);
+
+  // Create payment intent when entering the payment tab (for paid services)
+  async function enterPayment() {
+    if (!selected || selected.priceType === "estimate" || !selected.basePrice) {
+      setTab("payment");
+      return;
+    }
+    if (!tech.stripePublishableKey) {
+      setTab("payment"); // no Stripe configured — show fallback
+      return;
+    }
+    setStripeLoading(true);
+    setStripeError(null);
+    try {
+      const deposit = selected.basePrice * 0.2;
+      const res = await fetch("/api/payments/intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: deposit,
+          technicianId: tech.id,
+          metadata: { service: selected.name, client: contact.name, phone: contact.phone },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStripeError(data.error ?? "Failed to set up payment"); setStripeLoading(false); return; }
+      setClientSecret(data.clientSecret);
+    } catch {
+      setStripeError("Network error — please try again");
+    }
+    setStripeLoading(false);
+    setTab("payment");
+  }
 
   const canPay = !!(selectedDate && selectedTime && contact.name && contact.phone);
 
@@ -555,11 +602,18 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               </div>
             </div>
 
-            <button onClick={() => canPay && setTab("payment")} disabled={!canPay}
+            <button onClick={() => canPay && enterPayment()} disabled={!canPay || stripeLoading}
               className="w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-base"
               style={canPay ? brandStyle : {}}>
-              Continue to Payment <ChevronRight className="w-4 h-4" />
+              {stripeLoading
+                ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Setting up payment…</>
+                : <>Continue to Payment <ChevronRight className="w-4 h-4" /></>}
             </button>
+            {stripeError && (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />{stripeError}
+              </div>
+            )}
           </div>
         )}
 
@@ -617,55 +671,51 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               </div>
             </div>
 
-            {/* Card */}
+            {/* Payment — Stripe Elements if configured, fallback if not */}
             {selected?.priceType !== "estimate" && selected?.basePrice != null && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="font-bold text-slate-900 mb-1 flex items-center gap-2"><CreditCard className="w-4 h-4 text-orange-500"/>Payment Details</h3>
-                <p className="text-xs text-slate-400 mb-4 flex items-center gap-1.5"><Lock className="w-3 h-3"/>256-bit SSL encryption</p>
-                <div className="space-y-3">
-                  <LightField icon={User} label="Cardholder Name" value={card.name} onChange={v=>setCard({...card,name:v})} placeholder="John Smith" required />
-                  <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">Card Number</label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input value={card.number} onChange={e=>setCard({...card,number:e.target.value.replace(/\D/g,"").slice(0,16).replace(/(.{4})/g,"$1 ").trim()})}
-                        placeholder="1234 5678 9012 3456" required maxLength={19}
-                        className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 font-mono tracking-widest transition-all" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">Expiry</label>
-                      <input value={card.expiry} onChange={e=>setCard({...card,expiry:e.target.value.replace(/\D/g,"").slice(0,4).replace(/^(\d{2})(\d)/,"$1/$2")})}
-                        placeholder="MM/YY" required maxLength={5}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm placeholder-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 font-mono transition-all" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">CVV</label>
-                      <input value={card.cvv} onChange={e=>setCard({...card,cvv:e.target.value.replace(/\D/g,"").slice(0,4)})}
-                        placeholder="123" required maxLength={4}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm placeholder-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 font-mono transition-all" />
-                    </div>
-                  </div>
+              stripePromise && clientSecret ? (
+                <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: brand } } }}>
+                  <StripePaymentForm
+                    brand={brand}
+                    brandStyle={brandStyle}
+                    paying={paying}
+                    setPaying={setPaying}
+                    onSuccess={() => { setTab("confirmed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    onBook={async () => {
+                      if (!isDemo && selected && selectedDate && selectedTime) {
+                        await fetch(`/api/public/${id}/book`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ serviceId: selected.id, serviceName: selected.name, date: selectedDate.toISOString(), time: selectedTime, contact }),
+                        }).catch(() => {});
+                      }
+                    }}
+                  />
+                </Elements>
+              ) : (
+                /* No Stripe configured — show contact message */
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+                  <CreditCard className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-800 mb-1">Online payment not set up</p>
+                  <p className="text-xs text-slate-500">Payment will be collected on the day of service. Your booking is still confirmed!</p>
+                  <button type="submit" disabled={paying}
+                    className="mt-4 px-6 py-2.5 text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 mx-auto"
+                    style={brandStyle}>
+                    {paying ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Confirming…</> : <><CheckCircle className="w-4 h-4"/>Confirm Booking</>}
+                  </button>
                 </div>
-                <div className="flex gap-2 mt-4">
-                  {["VISA","MC","AMEX","DISC"].map(b=>(
-                    <div key={b} className="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-500">{b}</div>
-                  ))}
-                </div>
-              </div>
+              )
             )}
 
-            <button type="submit" disabled={paying}
-              className="w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-60 transition-all flex items-center justify-center gap-2 text-base"
-              style={brandStyle}>
-              {paying
-                ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Processing...</>
-                : selected?.priceType === "estimate"
-                ? <><CheckCircle className="w-4 h-4"/>Confirm Booking</>
-                : <><Lock className="w-4 h-4"/>Pay & Confirm Booking</>
-              }
-            </button>
+            {/* Free estimate — just confirm */}
+            {selected?.priceType === "estimate" && (
+              <button type="submit" disabled={paying}
+                className="w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-60 transition-all flex items-center justify-center gap-2 text-base"
+                style={brandStyle}>
+                {paying ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Confirming…</> : <><CheckCircle className="w-4 h-4"/>Confirm Booking</>}
+              </button>
+            )}
+
             <p className="text-center text-xs text-slate-400">Full refund if cancelled 24+ hours before service.</p>
           </form>
         )}
@@ -725,6 +775,68 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         )}
       </div>
     </div>
+  );
+}
+
+// ── Stripe Payment Form (used inside <Elements> wrapper) ─────────────────────
+function StripePaymentForm({ brand, brandStyle, paying, setPaying, onSuccess, onBook }: {
+  brand: string;
+  brandStyle: React.CSSProperties;
+  paying: boolean;
+  setPaying: (v: boolean) => void;
+  onSuccess: () => void;
+  onBook: () => Promise<void>;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setError(null);
+    setPaying(true);
+
+    await onBook(); // record the booking in DB
+
+    const { error: stripeErr } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+    });
+
+    setPaying(false);
+    if (stripeErr) {
+      setError(stripeErr.message ?? "Payment failed");
+    } else {
+      onSuccess();
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm mb-4">
+        <h3 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
+          <CreditCard className="w-4 h-4" style={{ color: brand }} /> Payment Details
+        </h3>
+        <p className="text-xs text-slate-400 mb-4 flex items-center gap-1.5">
+          <Lock className="w-3 h-3" /> Secured by Stripe — your card details never touch our servers
+        </p>
+        <PaymentElement options={{ layout: "tabs" }} />
+        {error && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />{error}
+          </div>
+        )}
+      </div>
+      <button type="submit" disabled={!stripe || !elements || paying}
+        className="w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-60 transition-all flex items-center justify-center gap-2 text-base"
+        style={brandStyle}>
+        {paying
+          ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Processing…</>
+          : <><Lock className="w-4 h-4" />Pay & Confirm Booking</>
+        }
+      </button>
+    </form>
   );
 }
 
